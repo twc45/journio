@@ -1,10 +1,16 @@
 import React, { useState, useMemo } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors } from "../theme/colors";
 import { ZODIAC_SIGNS } from "../data/zodiacData";
 import { PHASE_INFO, SPECIAL_MOONS } from "../data/moonData";
 import { getMoonPhase } from "../utils/moonPhase";
+import FactCarousel from "../components/FactCarousel";
+
+const SCREEN_WIDTH = Dimensions.get("window").width;
+const SCROLL_PADDING = 22; // matches styles.scroll padding
+const MY_SIGN_CARD_WIDTH = SCREEN_WIDTH - SCROLL_PADDING * 2 - 16 * 2; // mySignCard padding
+const SIGN_ROW_WIDTH = SCREEN_WIDTH - SCROLL_PADDING * 2 - 14 * 2; // signRow padding
 
 function dateRangeLabel(sign) {
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -33,11 +39,14 @@ function ZodiacContent({ profile, isDark }) {
           <Text style={[styles.mySignMeta, t.accent]}>
             {mySign.element} · {dateRangeLabel(mySign)}
           </Text>
-          {mySign.facts.map((f, i) => (
-            <Text key={i} style={[styles.mySignFact, t.primary]}>
-              {f}
-            </Text>
-          ))}
+          <FactCarousel
+            facts={mySign.facts}
+            width={MY_SIGN_CARD_WIDTH}
+            textColor={isDark ? colors.cream : colors.ink}
+            dotActive={colors.plum}
+            dotInactive={isDark ? colors.inkLine : colors.parchmentLine}
+            arrowColor={colors.plum}
+          />
         </View>
       )}
 
@@ -61,12 +70,18 @@ function ZodiacContent({ profile, isDark }) {
               </View>
               <Text style={[styles.chevron, t.accent]}>{isOpen ? "–" : "+"}</Text>
             </View>
-            {isOpen &&
-              sign.facts.map((f, i) => (
-                <Text key={i} style={[styles.signFact, t.primary]}>
-                  {f}
-                </Text>
-              ))}
+            {isOpen && (
+              <View style={{ marginTop: 10 }}>
+                <FactCarousel
+                  facts={sign.facts}
+                  width={SIGN_ROW_WIDTH}
+                  textColor={isDark ? colors.cream : colors.ink}
+                  dotActive={colors.plum}
+                  dotInactive={isDark ? colors.inkLine : colors.parchmentLine}
+                  arrowColor={colors.plum}
+                />
+              </View>
+            )}
           </TouchableOpacity>
         );
       })}
@@ -196,7 +211,7 @@ const styles = StyleSheet.create({
   mySignCard: {
     backgroundColor: colors.cream,
     borderRadius: 14,
-    padding: 22,
+    padding: 16,
     alignItems: "center",
     borderWidth: 1,
     borderColor: colors.parchmentLine,

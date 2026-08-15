@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing } from "react-native";
+import React, { useState } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import Dial from "../components/Dial";
+import FactCarousel from "../components/FactCarousel";
 import { colors } from "../theme/colors";
 import { PROMPTS } from "../data/journioData";
 import { ZODIAC_SIGNS } from "../data/zodiacData";
@@ -10,29 +11,17 @@ import { getTodayPortal } from "../data/portalData";
 import { useJournio } from "../hooks/useJournio";
 import { useFavorites } from "../hooks/useFavorites";
 
-export default function HomeScreen({ profile, initialAnimationPlaying = false }) {
+const SCREEN_WIDTH = Dimensions.get("window").width;
+const SIGN_CARD_WIDTH = SCREEN_WIDTH - 20 * 2 - 14 * 2; // signCardWrap padding + signCard padding
+
+export default function HomeScreen({ profile }) {
   const [spinning, setSpinning] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const [prompt, setPrompt] = useState(null);
   const { streak, totalEntries, recordToday } = useJournio();
   const { isFavorited, toggleFavorite } = useFavorites();
   const sign = ZODIAC_SIGNS.find((s) => s.name === profile?.signName);
-  const fact = sign ? sign.facts[Math.floor(Math.random() * sign.facts.length)] : null;
   const portal = getTodayPortal();
-
-  const signOpacity = useRef(new Animated.Value(initialAnimationPlaying ? 0 : 1)).current;
-
-  useEffect(() => {
-    if (!initialAnimationPlaying) {
-      // fade the sign card in smoothly
-      Animated.timing(signOpacity, {
-        toValue: 1,
-        duration: 480,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }).start();
-    }
-  }, [initialAnimationPlaying]);
 
   const handleReveal = () => {
     setSpinning(true);
@@ -81,15 +70,22 @@ export default function HomeScreen({ profile, initialAnimationPlaying = false })
         </View>
       )}
 
-      {!revealed && !spinning && sign && !initialAnimationPlaying && (
-        <Animated.View style={[styles.signCardWrap, { opacity: signOpacity }] }>
+      {!revealed && !spinning && sign && (
+        <View style={styles.signCardWrap}>
           <View style={styles.signCard}>
             <Text style={styles.signCardLabel}>
               {sign.symbol} {sign.name} · {sign.element}
             </Text>
-            <Text style={styles.signCardFact}>{fact}</Text>
+            <FactCarousel
+              facts={sign.facts}
+              width={SIGN_CARD_WIDTH}
+              textColor={colors.cream}
+              dotActive={colors.brass}
+              dotInactive={colors.inkLine}
+              arrowColor={colors.brassLight}
+            />
           </View>
-        </Animated.View>
+        </View>
       )}
 
       {revealed && (
@@ -164,7 +160,7 @@ const styles = StyleSheet.create({
   signCard: {
     backgroundColor: colors.inkLight,
     borderRadius: 10,
-    padding: 16,
+    padding: 14,
     borderWidth: 1,
     borderColor: colors.inkLine,
   },
@@ -175,7 +171,6 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     marginBottom: 8,
   },
-  signCardFact: { fontSize: 13, lineHeight: 19, color: colors.cream, opacity: 0.85 },
   cardWrap: { marginTop: 22, paddingHorizontal: 20 },
   card: {
     backgroundColor: colors.parchment,
