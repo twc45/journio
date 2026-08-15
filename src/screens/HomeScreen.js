@@ -1,9 +1,9 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import Dial from "../components/Dial";
-import FactCarousel from "../components/FactCarousel";
+import SparkleBurst from "../components/SparkleBurst";
 import { colors } from "../theme/colors";
 import { PROMPTS } from "../data/journioData";
 import { ZODIAC_SIGNS } from "../data/zodiacData";
@@ -11,16 +11,16 @@ import { getTodayPortal } from "../data/portalData";
 import { useJournio } from "../hooks/useJournio";
 import { useFavorites } from "../hooks/useFavorites";
 
-const SCREEN_WIDTH = Dimensions.get("window").width;
-const SIGN_CARD_WIDTH = SCREEN_WIDTH - 20 * 2 - 14 * 2; // signCardWrap padding + signCard padding
-
 export default function HomeScreen({ profile }) {
   const [spinning, setSpinning] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const [prompt, setPrompt] = useState(null);
+  const [showBurst, setShowBurst] = useState(false);
+  const [burstId, setBurstId] = useState(0);
   const { streak, totalEntries, recordToday } = useJournio();
   const { isFavorited, toggleFavorite } = useFavorites();
   const sign = ZODIAC_SIGNS.find((s) => s.name === profile?.signName);
+  const fact = sign ? sign.facts[Math.floor(Math.random() * sign.facts.length)] : null;
   const portal = getTodayPortal();
 
   const handleReveal = () => {
@@ -32,6 +32,8 @@ export default function HomeScreen({ profile }) {
       setSpinning(false);
       setRevealed(true);
       recordToday();
+      setBurstId((id) => id + 1);
+      setShowBurst(true);
     }, 1100);
   };
 
@@ -49,8 +51,11 @@ export default function HomeScreen({ profile }) {
         )}
       </View>
 
-      <View style={{ marginTop: 12 }}>
+      <View style={{ marginTop: 12, position: "relative" }}>
         <Dial onReveal={handleReveal} spinning={spinning} />
+        {showBurst && (
+          <SparkleBurst key={burstId} size={220} onComplete={() => setShowBurst(false)} />
+        )}
         {!revealed && !spinning && (
           <Text style={styles.hint}>tap the dial to draw today's page</Text>
         )}
@@ -76,14 +81,7 @@ export default function HomeScreen({ profile }) {
             <Text style={styles.signCardLabel}>
               {sign.symbol} {sign.name} · {sign.element}
             </Text>
-            <FactCarousel
-              facts={sign.facts}
-              width={SIGN_CARD_WIDTH}
-              textColor={colors.cream}
-              dotActive={colors.brass}
-              dotInactive={colors.inkLine}
-              arrowColor={colors.brassLight}
-            />
+            <Text style={styles.signCardFact}>{fact}</Text>
           </View>
         </View>
       )}
@@ -171,6 +169,7 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     marginBottom: 8,
   },
+  signCardFact: { fontSize: 13, lineHeight: 19, color: colors.cream, opacity: 0.85 },
   cardWrap: { marginTop: 22, paddingHorizontal: 20 },
   card: {
     backgroundColor: colors.parchment,

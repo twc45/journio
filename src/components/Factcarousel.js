@@ -1,55 +1,57 @@
-import React, { useState, useRef, useEffect } from "react";
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from "react-native";
+import React, { useState, useRef } from "react";
+import { View, Text, TouchableOpacity, Animated, PanResponder, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 
 export default function FactCarousel({ facts, width, textColor, dotActive, dotInactive, arrowColor }) {
-  const [index, setIndex] = useState(0);
-  const scrollRef = useRef(null);
-  // Picks a fresh starting fact each time this mounts (e.g. each time the tab is opened).
-  const initialIndex = useRef(Math.floor(Math.random() * facts.length)).current;
+  // Starts on a fresh random fact each time this mounts (e.g. each time the tab is opened).
+  const [index, setIndex] = useState(() => Math.floor(Math.random() * facts.length));
+  const opacity = useRef(new Animated.Value(1)).current;
+  const translateX = useRef(new Animated.Value(0)).current;
 
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTo({ x: initialIndex * width, animated: false });
-      setIndex(initialIndex);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const goTo = (newIndex) => {
-    const wrapped = (newIndex + facts.length) % facts.length;
-    scrollRef.current?.scrollTo({ x: wrapped * width, animated: true });
-    setIndex(wrapped);
+  const animateTo = (newIndex, direction) => {
+    Animated.parallel([
+      Animated.timing(opacity, { toValue: 0, duration: 140, useNativeDriver: true }),
+      Animated.timing(translateX, { toValue: direction * -18, duration: 140, useNativeDriver: true }),
+    ]).start(() => {
+      setIndex(newIndex);
+      translateX.setValue(direction * 18);
+      Animated.parallel([
+        Animated.timing(opacity, { toValue: 1, duration: 220, useNativeDriver: true }),
+        Animated.timing(translateX, { toValue: 0, duration: 220, useNativeDriver: true }),
+      ]).start();
+    });
   };
 
-  const handleScrollEnd = (e) => {
-    const newIndex = Math.round(e.nativeEvent.contentOffset.x / width);
-    setIndex(newIndex);
-  };
+  const goNext = () => animateTo((index + 1) % facts.length, 1);
+  const goPrev = () => animateTo((index - 1 + facts.length) % facts.length, -1);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gesture) =>
+        Math.abs(gesture.dx) > 18 && Math.abs(gesture.dx) > Math.abs(gesture.dy),
+      onPanResponderRelease: (_, gesture) => {
+        if (gesture.dx < -24) goNext();
+        else if (gesture.dx > 24) goPrev();
+      },
+    })
+  ).current;
 
   return (
     <View style={{ width }}>
       <View style={styles.row}>
-        <TouchableOpacity onPress={() => goTo(index - 1)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+        <TouchableOpacity onPress={goPrev} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Feather name="chevron-left" size={16} color={arrowColor} />
         </TouchableOpacity>
 
-        <ScrollView
-          ref={scrollRef}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          onMomentumScrollEnd={handleScrollEnd}
-          style={{ width: width - 56 }}
-        >
-          {facts.map((f, i) => (
-            <View key={i} style={{ width: width - 56 }}>
-              <Text style={[styles.fact, { color: textColor }]}>{f}</Text>
-            </View>
-          ))}
-        </ScrollView>
+        <View style={styles.factBox} {...panResponder.panHandlers}>
+          <Animated.Text
+            style={[styles.fact, { color: textColor, opacity, transform: [{ translateX }] }]}
+          >
+            {facts[index]}
+          </Animated.Text>
+        </View>
 
-        <TouchableOpacity onPress={() => goTo(index + 1)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+        <TouchableOpacity onPress={goNext} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Feather name="chevron-right" size={16} color={arrowColor} />
         </TouchableOpacity>
       </View>
@@ -67,7 +69,8 @@ export default function FactCarousel({ facts, width, textColor, dotActive, dotIn
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: "row", alignItems: "center", gap: 4 },
+  row: { flexDirection: "row", alignItems: "center", gap: 8 },
+  factBox: { flex: 1 },
   fact: { fontSize: 12, lineHeight: 17, opacity: 0.85, minHeight: 52 },
   dots: { flexDirection: "row", justifyContent: "center", gap: 5, marginTop: 8 },
   dot: { width: 4, height: 4, borderRadius: 2 },
